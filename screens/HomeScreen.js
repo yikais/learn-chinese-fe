@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { WebBrowser } from 'expo';
-import { Button } from 'react-native-elements'
+import { Button } from 'react-native-elements';
 
 import { MonoText } from '../components/StyledText';
 
@@ -17,44 +17,79 @@ export default class HomeScreen extends React.Component {
     header: null,
   };
 
+  constructor(props) {
+    super(props);
+    this.state = {
+      serverResponse: [],
+      revealWord: false,
+    }
+  }
+
+  async componentDidMount() {
+    try {
+      let response = await fetch('http://3.0.93.6:7000/getWord/randomN?numberToFetch=1&showPingYing=true&showCharacter=true&showMeaning=true&showExample=true&showNotes=true');
+      let responseJson = await response.json();
+      this.setState({
+        serverResponse: responseJson,
+      })
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   render() {
+    console.log('12121', this.state.serverResponse);
+    console.log('this.state.revealWord', this.state.revealWord)
+    const { serverResponse } = this.state;
+    if (serverResponse.length <= 0) return null;
+
     return (
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text>ID: {serverResponse[0].id}</Text>
+        <Text>PingYing: {serverResponse[0].pingYing}</Text>
+        <Text>Meaning: {serverResponse[0].meaning}</Text>
+        <Text>Notes: {serverResponse[0].notes}</Text>
+        {this.state.revealWord && <Text>Correct Word is: {serverResponse[0].character}</Text>}
+        <TouchableOpacity 
+          onPress={() => this.handleClickReveal()}
+          style={styles.revealBtn}
+        >
+          <Text>
+            Reveal
+          </Text>
+        </TouchableOpacity>
         <Button
           large
           loadingRight
-          onPress={this.handlePressAddWord}
+          onPress={this.handleClickCorrect}
           buttonStyle={styles.buttons}
-          title='Add A New Word'
+          title='I was correct'
         />
         <Button
           large
           loadingRight
-          onPress={this.handlePressRandomNWords}
+          onPress={this.handleClickIncorrect}
           buttonStyle={styles.buttons}
-          title='Random Words Test'
+          title='I was wrong'
         />
-        <Button
-          large
-          loadingRight
-          onPress={this.handlePressLastNWords}
-          buttonStyle={styles.buttons}
-          title='Last N Words Test'
-        />
-      </View>
+      </ScrollView>
     );
   }
 
-  handlePressAddWord = () => {
-    console.log('Add word pressed')
+  handleClickReveal() {
+    console.log('in')
+    this.setState({
+      revealWord: !this.state.revealWord,
+    })
+    console.log('this.state.revealWord 2', this.state.revealWord)
   }
 
-  handlePressRandomNWords = () => {
-    console.log('Random N words pressed');
+  handleClickCorrect() {
+
   }
 
-  handlePressLastNWords = () => {
-    console.log('Last N words pressed');
+  handleClickIncorrect() {
+
   }
 }
 
@@ -67,7 +102,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
-  buttons: {
+  revealBtn: {
     borderRadius: 5,
+    backgroundColor: '#ADD8E6',
+    width: 100,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
