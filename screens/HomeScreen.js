@@ -1,16 +1,15 @@
 import React from 'react';
 import {
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from 'react-native';
-import { WebBrowser } from 'expo';
-import { Button } from 'react-native-elements';
 
-import { MonoText } from '../components/StyledText';
+import WordDisplay from '../components/WordDisplay';
+import { WRITE_MODE, READ_MODE } from '../constants/Constants';
 
 export default class HomeScreen extends React.Component {
   static navigationOptions = {
@@ -19,77 +18,91 @@ export default class HomeScreen extends React.Component {
 
   constructor(props) {
     super(props);
+
     this.state = {
       serverResponse: [],
       revealWord: false,
+      refreshing: false,
     }
   }
 
-  async componentDidMount() {
+  getWordsFromApiAsync = async () => {
     try {
-      let response = await fetch('http://3.0.93.6:7000/getWord/randomN?numberToFetch=1&showPingYing=true&showCharacter=true&showMeaning=true&showExample=true&showNotes=true');
+      this.setState({refreshing: true});
+      let response = await fetch(
+        'http://3.0.93.6:7000/getWord/randomN?numberToFetch=1&showPingYing=true&showCharacter=true&showMeaning=true&showExample=true&showNotes=true'
+      );
       let responseJson = await response.json();
+      this.setState({refreshing: false});
       this.setState({
         serverResponse: responseJson,
       })
+      return responseJson;
     } catch (error) {
       console.error(error);
     }
+  } 
+
+  componentDidMount() {
+    this.getWordsFromApiAsync();
+  }
+
+  _onRefresh = () => {
+    this.getWordsFromApiAsync();
+  }
+
+  generateRandomMode() {
+    return Math.random() < 0.5 ? WRITE_MODE : READ_MODE;
+  }
+
+  handleClickCorrect() {
+    this.getWordsFromApiAsync();
+  }
+
+  handleClickIncorrect() {
+    this.getWordsFromApiAsync();
   }
 
   render() {
-    console.log('12121', this.state.serverResponse);
-    console.log('this.state.revealWord', this.state.revealWord)
     const { serverResponse } = this.state;
     if (serverResponse.length <= 0) return null;
 
     return (
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text>ID: {serverResponse[0].id}</Text>
-        <Text>PingYing: {serverResponse[0].pingYing}</Text>
-        <Text>Meaning: {serverResponse[0].meaning}</Text>
-        <Text>Notes: {serverResponse[0].notes}</Text>
-        {this.state.revealWord && <Text>Correct Word is: {serverResponse[0].character}</Text>}
-        <TouchableOpacity 
-          onPress={() => this.handleClickReveal()}
-          style={styles.revealBtn}
-        >
-          <Text>
-            Reveal
-          </Text>
-        </TouchableOpacity>
-        <Button
-          large
-          loadingRight
-          onPress={this.handleClickCorrect}
-          buttonStyle={styles.buttons}
-          title='I was correct'
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={this.state.refreshing}
+            onRefresh={this._onRefresh}
+          />
+        }
+      >
+        <WordDisplay 
+          displayMode={this.generateRandomMode()} 
+          id={serverResponse[0].id}
+          pingYing={serverResponse[0].pingYing}
+          meaning={serverResponse[0].meaning}
+          notes={serverResponse[0].notes}
+          character={serverResponse[0].character}
+          examples={serverResponse[0].examples}
         />
-        <Button
-          large
-          loadingRight
-          onPress={this.handleClickIncorrect}
-          buttonStyle={styles.buttons}
-          title='I was wrong'
-        />
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={() => this.handleClickCorrect()}
+            style={styles.buttons}
+          >
+            <Text>I'm correct</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => this.handleClickIncorrect()}
+            style={styles.buttons}
+          >
+            <Text>I'm wrong</Text>
+          </TouchableOpacity>
+        </View>
+          
       </ScrollView>
     );
-  }
-
-  handleClickReveal() {
-    console.log('in')
-    this.setState({
-      revealWord: !this.state.revealWord,
-    })
-    console.log('this.state.revealWord 2', this.state.revealWord)
-  }
-
-  handleClickCorrect() {
-
-  }
-
-  handleClickIncorrect() {
-
   }
 }
 
@@ -110,4 +123,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  displayWordContainer: {
+    height: 300,
+    alignItems: 'flex-start',
+  },
+  buttonContainer: {
+    width: 400,
+    paddingTop: 20,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  buttons: {
+    borderRadius: 5,
+    backgroundColor: '#ADD8E6',
+    width: 100,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  }
 });
